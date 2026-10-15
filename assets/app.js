@@ -131,7 +131,8 @@ function init(){
 
   map = L.map("map",{zoomControl:true,preferCanvas:true,minZoom:7,maxZoom:17}).setView([-26.5,31.5],9);
   map.attributionControl.setPrefix(false);
-  baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"});
+  // crossOrigin lets the PNG export copy the tiles onto a canvas (OSM sends CORS headers).
+  baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors",crossOrigin:"anonymous"});
   baseLayer.addTo(map);
   group = L.layerGroup().addTo(map);
 
@@ -156,6 +157,7 @@ function init(){
   $("fGeo").addEventListener("change",loadGeo);
   $("bCsv").addEventListener("click",downloadCsv);
   $("bLink").addEventListener("click",copyLink);
+  $("bPng").addEventListener("click",downloadPng);
   $("bLock").addEventListener("click",()=>location.reload());
   $("tabMap").addEventListener("click",()=>showTab("map"));
   $("tabCharts").addEventListener("click",()=>showTab("charts"));
@@ -422,6 +424,91 @@ function downloadCsv(){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   $("actionNote").textContent = "Downloaded counts for "+m.size+" constituencies.";
+}
+
+/* ---------- map picture (PNG) ---------- */
+// Drawn in the browser from what is on screen right now, so it always matches the
+// filters and never needs an unencrypted copy of the map stored on the website.
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+async function downloadPng(){
+  const btn=$("bPng"), note=$("pngNote");
+  btn.disabled=true; btn.textContent="Preparing...";
+  note.textContent="";
+  try{
+    if(S.tab!=="map"){ showTab("map"); await sleep(450); }
+    // Give the basemap up to 5 s to finish loading the tiles in view.
+    for(let t=0; S.base && baseLayer.isLoading && baseLayer.isLoading() && t<50; t++) await sleep(100);
+    let blob, withTiles = S.base;
+    try{ blob = await drawMapPng(withTiles); }
+    catch(ex){ withTiles=false; blob = await drawMapPng(false); } // tiles blocked: still give the circles
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="eswatini-tb-map-"+new Date().toISOString().slice(0,10)+".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    note.textContent = S.base && !withTiles ? "Downloaded without the street basemap (it could not be copied)." : "Map downloaded. It shows patient locations, so keep it inside the organisation.";
+  }catch(ex){
+    note.textContent="The picture could not be made in this browser.";
+  }finally{
+    btn.disabled=false; btn.textContent="Download map (PNG)";
+  }
+}
+
+function drawMapPng(withTiles){
+  const el=$("map"), box=el.getBoundingClientRect();
+  const W=Math.round(box.width), MH=Math.round(box.height), HEAD=96, FOOT=64, H=HEAD+MH+FOOT;
+  const k=2, c=document.createElement("canvas");
+  c.width=W*k; c.height=H*k;
+  const x=c.getContext("2d");
+  x.scale(k,k);
+  const font=(w,sz,serif)=>w+" "+sz+"px "+(serif?'Georgia,"Times New Roman",serif':'system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif');
+  x.fillStyle="#ffffff"; x.fillRect(0,0,W,H);
+
+  // header: title, what is shown, the numbers
+  const rows=filtered(), n=rows.length, d=rows.reduce((a,r)=>a+r[7],0);
+  const view={all:"All patients",deaths:"Deaths only",alive:"Alive only"}[S.view];
+  const active=FILTERS.filter(k=>S[k]!=="").map(filterLabel);
+  x.fillStyle="#14213d"; x.font=font("600",22,true); x.fillText("Eswatini TB Map",16,32);
+  x.fillStyle="#4b5565"; x.font=font("400",13);
+  x.fillText(fitText(x,view+"  |  Filters: "+(active.length?active.join("; "):"none"),W-32),16,56);
+  x.fillStyle="#1d2433"; x.font=font("600",13);
+  x.fillText(n+" patients  |  "+d+" deaths  |  "+pct(d,n)+"% death rate  |  "+$("kLoc").textContent+" places",16,78);
+
+  // map: basemap tiles, then the circle canvas(es) Leaflet drew, clipped to the map box
+  x.save(); x.beginPath(); x.rect(0,HEAD,W,MH); x.clip();
+  x.fillStyle="#e9f0f4"; x.fillRect(0,HEAD,W,MH);
+  const put=(img,r)=>x.drawImage(img,r.left-box.left,HEAD+r.top-box.top,r.width,r.height);
+  if(withTiles){
+    el.querySelectorAll(".leaflet-tile-pane img.leaflet-tile-loaded").forEach(img=>{
+      if(img.closest(".leaflet-layer") && getComputedStyle(img).opacity!=="0") put(img,img.getBoundingClientRect());
+    });
+  }
+  el.querySelectorAll(".leaflet-overlay-pane canvas").forEach(cv=>put(cv,cv.getBoundingClientRect()));
+  x.restore();
+  x.strokeStyle="#dedbd2"; x.lineWidth=1; x.strokeRect(0.5,HEAD+0.5,W-1,MH-1);
+
+  // footer: legend and source
+  let lx=16; const ly=HEAD+MH+24;
+  const item=(col,t)=>{ x.fillStyle=col; x.beginPath(); x.arc(lx+6,ly-4,6,0,7); x.fill(); x.strokeStyle="#fff"; x.stroke();
+    x.fillStyle="#1d2433"; x.font=font("400",12); x.fillText(t,lx+18,ly); lx+=28+x.measureText(t).width; };
+  if(S.view==="all"){ item(COL.blue,"No deaths here"); item(COL.amber,"1 death"); item(COL.red,"2 or more deaths"); }
+  else if(S.view==="deaths") item(COL.red,"Places with at least one death");
+  else item(COL.blue,"Places with patients alive");
+  x.fillStyle="#4b5565"; x.font=font("400",12);
+  x.fillText(S.view==="deaths"?"Bigger circle = more deaths.":S.view==="alive"?"Bigger circle = more patients alive.":"Bigger circle = more patients.",lx,ly);
+  x.fillStyle="#788091"; x.font=font("400",11);
+  const src=(withTiles?"Basemap \u00a9 OpenStreetMap contributors  |  ":"")+"Made "+new Date().toISOString().slice(0,10)+"  |  For internal use by the organisation only. Do not share outside it.";
+  x.fillText(fitText(x,src,W-32),16,ly+24);
+
+  // toBlob throws (or returns null) if a tile without CORS tainted the canvas
+  return new Promise((res,rej)=>{
+    try{ c.toBlob(b=>b?res(b):rej(new Error("empty")),"image/png"); }catch(ex){ rej(ex); }
+  });
+}
+function fitText(x,t,max){
+  if(x.measureText(t).width<=max) return t;
+  while(t.length>1 && x.measureText(t+"...").width>max) t=t.slice(0,-1);
+  return t+"...";
 }
 
 async function copyLink(){

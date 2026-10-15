@@ -90,9 +90,13 @@
   </aside>
 
   <main class="mainwrap">
-    <div class="tabs" role="tablist" aria-label="View">
-      <button type="button" role="tab" id="tabMap" aria-controls="panelMap" aria-selected="true">Map</button>
-      <button type="button" role="tab" id="tabCharts" aria-controls="panelCharts" aria-selected="false" tabindex="-1">Charts</button>
+    <div class="tabbar">
+      <div class="tabs" role="tablist" aria-label="View">
+        <button type="button" role="tab" id="tabMap" aria-controls="panelMap" aria-selected="true">Map</button>
+        <button type="button" role="tab" id="tabCharts" aria-controls="panelCharts" aria-selected="false" tabindex="-1">Charts</button>
+      </div>
+      <span class="png-note" id="pngNote" aria-live="polite"></span>
+      <button class="btn btn-sm btn-png" type="button" id="bPng">Download map (PNG)</button>
     </div>
     <section class="mapwrap" id="panelMap" role="tabpanel" aria-labelledby="tabMap">
       <div id="map" role="application" aria-label="Map of TB patients in Eswatini"></div>

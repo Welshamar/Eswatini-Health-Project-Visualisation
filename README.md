@@ -16,6 +16,9 @@ age group, sex, HIV status, TB type and constituency.
   Active filters show as chips you can remove one by one.
 - **Copy link to this view**: the address keeps the current filters and tab,
   so you can send a colleague the exact view. They still need the password.
+- **Download map (PNG)**: a picture of the map as it is on screen, with the
+  title, active filters, headline numbers and legend. It is drawn in the
+  browser after unlocking, so no unencrypted map is stored on the website.
 - **Download summary (CSV)**: counts per constituency for the current
   filters. It never contains patient-level rows.
 - **Add boundaries (GeoJSON)**: overlay district or constituency outlines
