@@ -10,10 +10,14 @@ age group, sex, HIV status, TB type and constituency.
 
 - **Map**: one circle per place, sized by number of patients and coloured by
   deaths (none / 1 / 2 or more). Click a circle for the details.
-- **Charts**: each group (region, age, sex, HIV, TB type, constituency) shows
-  alive vs died and the death rate. Click a bar to filter the whole page by it.
-- **Filters**: region, TB type, HIV status, sex, age group and constituency.
-  Active filters show as chips you can remove one by one.
+- **Charts**: the TB patient cohort dashboard (191 patients, its own data
+  and filters): overview numbers, patients and outcomes by region, regional
+  share, top constituencies, MDR-TB / HIV / helminth / mortality rings, TB
+  type, HIV status, gender, age, mortality by risk factor, a region and
+  constituency network, and a sortable table of patient records. If the
+  cohort has a different password from the map, the Charts tab asks for it.
+- **Filters** (left panel, map only): region, TB type, HIV status, sex, age
+  group and constituency. Active filters show as chips you can remove one by one.
 - **Copy link to this view**: the address keeps the current filters and tab,
   so you can send a colleague the exact view. They still need the password.
 - **Download map (PNG)**: a picture of the map as it is on screen, with the
@@ -62,7 +66,14 @@ security headers (Content-Security-Policy, no framing, `noindex`), and
 Every push to `main` updates the live site automatically. The old address
 `tb_web_map.html` forwards to the new page.
 
-## Update the data or change the password
+## Update the cohort charts data
+
+The Charts tab reads `assets/cohort-data.enc.js`. To replace it with a newer
+cohort dashboard export, copy the `ENCRYPTED_PAYLOAD = {...}` object from that
+dashboard's HTML into this file as `window.COHORT_PAYLOAD = {...};`. The data
+stays encrypted with the cohort dashboard's password.
+
+## Update the map data or change the password
 
 You need the patient rows as a JSON array (one row per patient, the field
 order is described at the top of `tools/encrypt_data.py`). Keep that file
@@ -90,7 +101,9 @@ python -m http.server 8000
 index.html             the page
 assets/app.js          map, charts, filters, downloads
 assets/app.css         styles (light and dark)
-assets/tb-data.enc.js  the encrypted patient data
+assets/tb-data.enc.js  the encrypted map data
+assets/cohort.js       the Charts tab (cohort dashboard)
+assets/cohort-data.enc.js  the encrypted cohort data for the Charts tab
 assets/leaflet/        Leaflet 1.9.4 map library (served locally, no CDN)
 tools/encrypt_data.py  encrypts new data / sets a new password
 tb_web_map.html        forwards old links to index.html

@@ -3,7 +3,6 @@ let ROWS = [];
 // row layout: 0 area, 1 constituency, 2 region, 3 mdr(0/1), 4 hiv positive(0/1), 5 sex, 6 age, 7 died(0/1), 8 lat, 9 lon, 10 spread lat, 11 spread lon
 const AGE_GROUPS = [["18 to 29",18,29],["30 to 39",30,39],["40 to 49",40,49],["50 to 59",50,59],["60 and over",60,200]];
 const COL = {blue:"#3b8bc4", amber:"#f2a33a", red:"#b3261e"};
-const FEW = 10; // groups smaller than this get a greyed-out death rate
 
 /* ---------- unlock ---------- */
 function b64ToBytes(b64){const s=atob(b64);const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a}
@@ -24,8 +23,9 @@ document.getElementById("lockForm").addEventListener("submit",async e=>{
   }
   btn.disabled=true; btn.textContent="Checking..."; err.hidden=true;
   let rows;
+  const password=document.getElementById("lockPassword").value;
   try{
-    rows=await tryUnlock(document.getElementById("lockPassword").value);
+    rows=await tryUnlock(password);
   }catch(ex){
     err.textContent="That password is not right. Try again.";
     err.hidden=false; btn.disabled=false; btn.textContent="Unlock";
@@ -35,6 +35,8 @@ document.getElementById("lockForm").addEventListener("submit",async e=>{
   document.body.classList.remove("locked");
   document.getElementById("lockScreen").remove();
   init();
+  // The Charts tab has its own cohort data; try the same password on it.
+  if(window.Cohort) window.Cohort.afterMapUnlock(password);
 });
 document.getElementById("pwToggle").addEventListener("click",e=>{
   const inp=document.getElementById("lockPassword"), show=inp.type==="password";
@@ -232,7 +234,7 @@ function render(refit){
 
   const n=rows.length, d=rows.reduce((a,r)=>a+r[7],0);
   $("kPat").textContent=n; $("kDead").textContent=d; $("kRate").textContent=pct(d,n)+"%"; $("kLoc").textContent=groups.length;
-  legend(); places(shown); chips(); charts();
+  legend(); places(shown); chips();
   $("mapNote").textContent = S.spread
     ? "Where many patients share one coordinate, each area is placed around it, so positions inside a cluster are approximate."
     : "Circles sit at the coordinates in the data. Many patients share the same point, so they stack.";
@@ -313,86 +315,6 @@ function chips(){
     x.addEventListener("click",()=>setFilter(k,""));
     span.appendChild(x); box.appendChild(span);
   }
-}
-
-/* ---------- charts ---------- */
-// Each chart: how to read a row's group key, how to label it, and the filter
-// value clicking it sets (null = not clickable, e.g. ages outside the groups).
-const CHARTS = [
-  {title:"Region", filter:"region", key:r=>r[2], label:k=>k, value:k=>k},
-  {title:"Age group", filter:"age", key:r=>ageGroup(r[6])||"Other or unknown", label:k=>k,
-   value:k=>AGE_GROUPS.some(g=>g[0]===k)?k:null, order:[...AGE_GROUPS.map(g=>g[0]),"Other or unknown"]},
-  {title:"Sex", filter:"sex", key:r=>r[5], label:k=>k, value:k=>k},
-  {title:"HIV status", filter:"hiv", key:r=>String(r[4]), label:k=>k==="1"?"HIV-positive":"HIV-negative", value:k=>k, order:["1","0"]},
-  {title:"TB type", filter:"tb", key:r=>String(r[3]), label:k=>k==="1"?"MDR-TB":"Drug-sensitive", value:k=>k, order:["0","1"]},
-  {title:"Constituency", filter:"cons", key:r=>r[1], label:k=>nice(k), value:k=>k, top:12},
-];
-
-function charts(){
-  const grid = $("chartGrid");
-  grid.textContent = "";
-  for(const c of CHARTS) grid.appendChild(chartCard(c));
-}
-
-function chartCard(c){
-  const rows = filtered(c.filter);
-  const m = new Map();
-  for(const r of rows){
-    const k = c.key(r);
-    const g = m.get(k) || {n:0,d:0};
-    g.n++; g.d += r[7]; m.set(k,g);
-  }
-  let items = [...m.entries()].map(([k,g])=>({k, n:g.n, d:g.d}));
-  if(c.order) items.sort((a,b)=>c.order.indexOf(a.k)-c.order.indexOf(b.k));
-  else items.sort((a,b)=>b.n-a.n || String(a.k).localeCompare(String(b.k)));
-  const hidden = c.top && items.length>c.top ? items.length-c.top : 0;
-  if(hidden){
-    // Keep a selected constituency visible even when it is outside the top list.
-    const sel = items.findIndex(i=>i.k===S[c.filter]);
-    const keep = items.slice(0,c.top);
-    if(sel>=c.top) keep[c.top-1] = items[sel];
-    items = keep;
-  }
-  const mx = items.reduce((a,i)=>Math.max(a,i.n),1);
-
-  const card=document.createElement("div"); card.className="chart";
-  const h=document.createElement("h3"); h.textContent=c.title;
-  const sm=document.createElement("small"); sm.textContent=rows.length+" patients"; h.appendChild(sm);
-  card.appendChild(h);
-  if(!items.length){
-    const p=document.createElement("p"); p.className="empty"; p.textContent="Nothing matches these filters."; card.appendChild(p);
-    return card;
-  }
-  const ul=document.createElement("ul"); ul.className="bars";
-  for(const it of items){
-    const val = c.value(it.k), label = c.label(it.k), alive = it.n-it.d, rate = pct(it.d,it.n);
-    const li=document.createElement("li");
-    const b=document.createElement(val===null?"div":"button");
-    b.className="bar-row";
-    const desc = label+": "+it.n+(it.n===1?" patient, ":" patients, ")+alive+" alive, "+it.d+" died, death rate "+rate+"%";
-    b.title = desc;
-    if(val!==null){
-      b.type="button";
-      b.setAttribute("aria-pressed",String(S[c.filter]===val));
-      b.setAttribute("aria-label",desc+(S[c.filter]===val?". Click to remove this filter.":". Click to filter by this."));
-      b.addEventListener("click",()=>setFilter(c.filter, S[c.filter]===val ? "" : val));
-    }
-    const lab=document.createElement("span"); lab.className="bar-label"; lab.textContent=label;
-    const sub=document.createElement("small"); sub.textContent=it.n+(it.n===1?" patient, ":" patients, ")+it.d+" died"; lab.appendChild(sub);
-    const track=document.createElement("span"); track.className="bar-track"; track.setAttribute("aria-hidden","true");
-    track.style.width=Math.max(2,100*it.n/mx)+"%";
-    if(alive){ const a=document.createElement("i"); a.className="a"; a.style.flex=String(alive); track.appendChild(a); }
-    if(it.d){ const d=document.createElement("i"); d.className="d"; d.style.flex=String(it.d); track.appendChild(d); }
-    const rt=document.createElement("span"); rt.className="bar-rate"+(it.n<FEW?" few":""); rt.textContent=rate+"%";
-    b.append(lab,track,rt); li.appendChild(b); ul.appendChild(li);
-  }
-  card.appendChild(ul);
-  if(hidden){
-    const p=document.createElement("p"); p.className="more";
-    p.textContent="Showing the "+c.top+" biggest of "+(hidden+c.top)+". Pick any constituency from the filter on the left.";
-    card.appendChild(p);
-  }
-  return card;
 }
 
 /* ---------- downloads and links ---------- */

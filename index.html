@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="assets/app.css">
 <script src="assets/leaflet/leaflet.js" defer></script>
 <script src="assets/tb-data.enc.js" defer></script>
+<script src="assets/cohort-data.enc.js" defer></script>
+<script src="assets/cohort.js" defer></script>
 <script src="assets/app.js" defer></script>
 </head>
 <body class="locked">
@@ -102,13 +104,148 @@
       <div id="map" role="application" aria-label="Map of TB patients in Eswatini"></div>
       <div class="mapnote" id="mapNote"></div>
     </section>
-    <section class="charts" id="panelCharts" role="tabpanel" aria-labelledby="tabCharts" hidden>
-      <div class="charts-head">
-        <h2>Patients and deaths by group</h2>
-        <p class="sub">Each bar splits the patients in a group into <span class="key"><i class="sw sw-alive"></i>alive</span> and <span class="key"><i class="sw sw-died"></i>died</span>. The death rate is on the right. Click a bar to filter everything by it. Charts follow the filters on the left.</p>
-        <p class="sub small">Death rates for groups with fewer than 10 patients are shown in grey because one patient more or less changes them a lot.</p>
+    <section class="charts cohort" id="panelCharts" role="tabpanel" aria-labelledby="tabCharts" hidden>
+      <form class="co-lock" id="coLock" autocomplete="off" hidden>
+        <h2>Unlock the cohort charts</h2>
+        <p>These charts use the TB patient cohort file, which has its own password. Enter it to view them.</p>
+        <div class="co-lock-row">
+          <input type="password" id="coPassword" placeholder="Cohort password" aria-label="Cohort password" required>
+          <button type="submit" class="btn" id="coSubmit">Unlock</button>
+        </div>
+        <p class="co-lock-error" id="coError" role="alert" hidden>That password is not right. Try again.</p>
+      </form>
+
+      <div class="co-wrap" id="coWrap" hidden>
+        <header class="co-top">
+          <h2>Eswatini TB Patient Cohort</h2>
+          <p class="co-sub" id="coSub"></p>
+          <p class="co-byline">Compiled by Welborn K, September 2026. Every chart and table below follows the filters just under this line. The map and the left panel use their own data and filters.</p>
+        </header>
+
+        <div class="co-banner"><strong>Organisation-internal data.</strong> This view contains study participant identifiers and residential-area detail. Keep it within your organisation.</div>
+
+        <div class="co-deck">
+          <nav class="co-nav" aria-label="Jump to section">
+            <button type="button" data-target="coOverview">Overview</button>
+            <button type="button" data-target="coGeography">Geography</button>
+            <button type="button" data-target="coClinical">Clinical</button>
+            <button type="button" data-target="coDemographics">Demographics</button>
+            <button type="button" data-target="coRisk">Risk factors</button>
+            <button type="button" data-target="coNetwork">Network</button>
+            <button type="button" data-target="coRecords">Patient records</button>
+          </nav>
+          <div class="co-filterbar">
+            <select id="coRegion" aria-label="Region"><option value="">All regions</option></select>
+            <select id="coTb" aria-label="TB type"><option value="">All TB types</option></select>
+            <select id="coHiv" aria-label="HIV status"><option value="">All HIV status</option></select>
+            <select id="coGender" aria-label="Gender"><option value="">All genders</option></select>
+            <select id="coStatus" aria-label="Outcome"><option value="">All outcomes</option></select>
+            <select id="coHelminth" aria-label="Helminth study"><option value="">Helminth: all</option></select>
+            <input type="search" id="coSearch" placeholder="Search ID, area, constituency..." aria-label="Search">
+            <button type="button" class="co-reset" id="coReset">Reset</button>
+            <span class="co-shown" id="coShown"></span>
+          </div>
+        </div>
+
+        <section id="coOverview">
+          <div class="co-head"><h3>Overview</h3><p>What the current filter shows, at a glance</p></div>
+          <div class="co-kpis" id="coKpis"></div>
+        </section>
+
+        <section id="coGeography">
+          <div class="co-head"><h3>Geography</h3><p>Where the cohort lives, and how outcomes differ from region to region</p></div>
+          <div class="co-grid2">
+            <figure class="co-card">
+              <h4>Patients by region</h4><p class="co-cap">How many patients each region has on record</p>
+              <div class="co-barlist" id="coChartRegion"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblRegion"></table></details>
+            </figure>
+            <figure class="co-card">
+              <h4>Regional share</h4><p class="co-cap">The same regions, sized by share of the cohort. Click a legend row to hide it.</p>
+              <div class="co-pie" id="coPieRegion"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblPieRegion"></table></details>
+            </figure>
+          </div>
+          <div class="co-grid2">
+            <figure class="co-card">
+              <h4>Outcome by region</h4><p class="co-cap">Alive and died, split by region. Click a legend item to isolate it.</p>
+              <div class="co-legend" id="coLegendOutcome"></div>
+              <div class="co-barlist" id="coChartOutcome"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblOutcome"></table></details>
+            </figure>
+            <figure class="co-card">
+              <h4>Top constituencies</h4><p class="co-cap">The 12 constituencies with the most patients enrolled</p>
+              <div class="co-barlist" id="coChartConst"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblConst"></table></details>
+            </figure>
+          </div>
+        </section>
+
+        <section id="coClinical">
+          <div class="co-head"><h3>Clinical</h3><p>TB type, HIV status and helminth co-enrollment, as a share of the cohort</p></div>
+          <div class="co-grid4" id="coMeters"></div>
+          <div class="co-grid2">
+            <figure class="co-card">
+              <h4>TB type</h4><p class="co-cap">Drug-sensitive (DSTB) vs. multidrug-resistant (MDR-TB)</p>
+              <div class="co-barlist" id="coChartTb"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblTb"></table></details>
+            </figure>
+            <figure class="co-card">
+              <h4>HIV status</h4><p class="co-cap">Participant HIV status at enrollment</p>
+              <div class="co-barlist" id="coChartHiv"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblHiv"></table></details>
+            </figure>
+          </div>
+        </section>
+
+        <section id="coDemographics">
+          <div class="co-head"><h3>Demographics</h3><p>Gender and age structure of the cohort</p></div>
+          <div class="co-grid2">
+            <figure class="co-card">
+              <h4>Gender</h4><p class="co-cap">Participant gender</p>
+              <div class="co-barlist" id="coChartGender"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblGender"></table></details>
+            </figure>
+            <figure class="co-card">
+              <h4>Age distribution</h4><p class="co-cap">Patients by age group (years)</p>
+              <div class="co-hist" id="coChartAge"></div>
+              <details class="co-tview"><summary>View as table</summary><table id="coTblAge"></table></details>
+            </figure>
+          </div>
+        </section>
+
+        <section id="coRisk">
+          <div class="co-head"><h3>Risk factors</h3><p>Mortality rate by subgroup, sorted highest to lowest</p></div>
+          <figure class="co-card">
+            <h4>Mortality rate by factor</h4><p class="co-cap">Share of patients recorded as "Died" within each subgroup</p>
+            <div class="co-barlist" id="coChartMortality"></div>
+            <details class="co-tview"><summary>View as table</summary><table id="coTblMortality"></table></details>
+          </figure>
+        </section>
+
+        <section id="coNetwork">
+          <div class="co-head"><h3>Network</h3><p>Regions as hubs, constituencies as leaves, each sized by how many patients it holds</p></div>
+          <figure class="co-card">
+            <div class="co-legend" id="coLegendNetwork"></div>
+            <div class="co-net"><svg id="coNetSvg" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Network of regions and constituencies"></svg></div>
+            <p class="co-cap co-net-hint">Node size = patients enrolled. Drag any node to move it. Hover for details.</p>
+            <details class="co-tview"><summary>View as table</summary><table id="coTblNetwork"></table></details>
+          </figure>
+        </section>
+
+        <section id="coRecords">
+          <div class="co-head"><h3>Patient records</h3><p>Every record in the current filter. Click a column heading to sort.</p></div>
+          <figure class="co-card">
+            <p class="co-cap" id="coRowCount"></p>
+            <div class="co-table-scroll">
+              <table class="co-datatable">
+                <thead><tr id="coTheadRow"></tr></thead>
+                <tbody id="coTbody"></tbody>
+              </table>
+            </div>
+          </figure>
+        </section>
       </div>
-      <div class="chart-grid" id="chartGrid"></div>
     </section>
   </main>
 </div>
