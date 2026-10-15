@@ -168,10 +168,7 @@ h1{font-size:22px;line-height:1.2}
 
 .co-wrap{max-width:1220px;margin:0 auto;padding-top:20px}
 .co-top h2{font-size:25px;letter-spacing:-.01em;margin-bottom:6px}
-.co-sub{margin:0 0 6px;color:var(--co-text-2);font-size:14px;max-width:70ch}
-.co-byline{margin:0 0 16px;color:var(--co-muted);font-size:12px}
-.co-banner{background:var(--co-surface-2);border:1px solid var(--co-border);border-left:3px solid var(--co-series-1);border-radius:3px;padding:10px 14px;margin-bottom:14px;color:var(--co-text-2);font-size:13px}
-.co-banner strong{color:var(--co-text)}
+.co-sub{margin:0 0 14px;color:var(--co-text-2);font-size:14px;max-width:70ch}
 
 .co-deck{position:sticky;top:0;z-index:20;background:var(--co-plane);padding:10px 0 12px;margin-bottom:14px;border-bottom:1px solid var(--co-border)}
 .co-nav{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
