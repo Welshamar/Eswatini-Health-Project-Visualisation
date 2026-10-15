@@ -122,7 +122,12 @@ h1{font-size:22px;line-height:1.2}
 .chip button:hover{color:var(--ink)}
 
 /* tabs */
-.tabs{display:flex;gap:2px;padding:8px 10px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabbar{display:flex;align-items:flex-end;gap:10px;padding:8px 10px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:2px}
+.png-note{margin-left:auto;font-size:12px;color:var(--ink2);padding-bottom:9px;text-align:right}
+.btn-png{margin-bottom:6px;white-space:nowrap}
+.btn-png:disabled{opacity:.6;cursor:default}
+@media (max-width:520px){.png-note{display:none}}
 .tabs button{border:1px solid transparent;border-bottom:0;background:transparent;padding:7px 16px;border-radius:7px 7px 0 0;cursor:pointer;color:var(--ink2);font-size:13px;margin-bottom:-1px}
 .tabs button[aria-selected="true"]{background:var(--bg);border-color:var(--line);color:var(--ink);font-weight:600}
 
