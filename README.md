@@ -33,7 +33,22 @@ only protection**. Use a long one (a phrase of 4 or more random words, or 16+
 characters), share it only with people who need it, and change it (re-encrypt,
 below) if it leaks or someone leaves.
 
-## Put it online (GitHub Pages)
+## Put it online (Vercel)
+
+1. Sign in at **https://vercel.com** with your GitHub account.
+2. Click **Add New… → Project**, find **Eswatini-Health-Project-Visualisation**
+   and click **Import** (if it is not listed, click **Adjust GitHub App
+   Permissions** and give Vercel access to this repository).
+3. Leave **Framework Preset** as **Other**, leave the build and output
+   settings empty, and click **Deploy**.
+4. When it finishes, Vercel shows the address (for example
+   `https://eswatini-health-project-visualisation.vercel.app`).
+
+Every push to `main` redeploys the site automatically. `vercel.json` adds
+security headers (Content-Security-Policy, no framing, `noindex`), and
+`.vercelignore` keeps `tools/` and the README off the site.
+
+## Or put it online with GitHub Pages
 
 1. In this repository on GitHub go to **Settings → Pages**.
 2. Under **Build and deployment**, set **Source** to **Deploy from a branch**,
@@ -76,4 +91,5 @@ assets/tb-data.enc.js  the encrypted patient data
 assets/leaflet/        Leaflet 1.9.4 map library (served locally, no CDN)
 tools/encrypt_data.py  encrypts new data / sets a new password
 tb_web_map.html        forwards old links to index.html
+vercel.json            Vercel hosting settings and security headers
 ```
