@@ -33,7 +33,7 @@ body.locked .app{display:none}
 .lock-error{color:var(--red);margin:10px 0 0 !important}
 
 /* layout */
-.app{display:grid;grid-template-columns:352px 1fr;height:100vh}
+.app{display:grid;grid-template-columns:352px 1fr;height:100vh;height:100dvh}
 .side{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line)}
 .side-scroll{overflow:auto;padding:18px 18px 12px;flex:1}
 .mainwrap{display:flex;flex-direction:column;min-height:0;min-width:0}
@@ -96,8 +96,12 @@ h1{font-size:22px;line-height:1.2}
 @media (max-width:860px){
   .app{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto;min-height:100vh}
   .mainwrap{order:-1}
-  .mapwrap{height:60vh;flex:none}
-  .charts{max-height:none}
+  .mapwrap{height:60vh;height:60dvh;min-height:300px;flex:none}
+  .charts{max-height:none;overflow:visible;padding:0 14px 32px}
+  /* On stacked layouts the left panel only controls the map, so it is hidden while the Charts tab is open. */
+  body.tab-charts .side{display:none}
+  .co-deck{position:static}
+  .cohort section{scroll-margin-top:12px}
   .side{border-right:0}
   .side-scroll{overflow:visible}
 }
@@ -253,7 +257,7 @@ h1{font-size:22px;line-height:1.2}
 .co-meter .msub{font-size:11px;color:var(--co-muted)}
 
 .co-net{border:1px solid var(--co-border);border-radius:8px;background:var(--co-surface-1);overflow:hidden}
-.co-net svg{display:block;width:100%;height:auto;touch-action:none}
+.co-net svg{display:block;width:100%;height:auto;touch-action:pan-x pan-y}
 .co-net-node circle{cursor:grab}
 .co-net-link{stroke-opacity:.5}
 .co-net-labelbg{fill:var(--co-surface-1);opacity:.85}
@@ -285,3 +289,27 @@ h1{font-size:22px;line-height:1.2}
 .co-tooltip .t-row{display:flex;align-items:center;gap:6px}
 .co-tooltip .t-key{width:9px;height:3px;border-radius:2px;flex:0 0 auto}
 .co-tooltip .t-val{font-weight:600;margin-left:auto;padding-left:10px}
+
+/* phones held sideways: keep the map usable but leave a strip to scroll the page */
+@media (max-width:860px) and (orientation:landscape) and (max-height:500px){
+  .mapwrap{height:78vh;height:78dvh;min-height:240px}
+}
+/* tablets in portrait: use the width for the panel under the map */
+@media (min-width:600px) and (max-width:860px){
+  .filters{grid-template-columns:repeat(3,1fr)}
+  .side-scroll{padding:18px 24px 12px}
+}
+/* touch screens: bigger targets */
+@media (pointer:coarse){
+  .btn{min-height:40px}
+  .btn-sm{min-height:34px}
+  .tabs button{padding:10px 18px}
+  .filters select{min-height:40px}
+  .seg button{padding:11px 4px}
+  .co-nav{gap:6px 14px}
+  .co-nav button{padding:8px 2px}
+  .co-filterbar select,.co-filterbar input,.co-reset{min-height:40px}
+  .co-legend .item,.co-pie .prow{padding:6px 6px}
+  .co-tview summary{padding:6px 0}
+  .leaflet-touch .leaflet-bar a{width:36px;height:36px;line-height:36px}
+}

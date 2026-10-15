@@ -201,6 +201,7 @@ function showTab(tab, first){
   $("tabCharts").setAttribute("aria-selected",String(!isMap)); $("tabCharts").tabIndex = isMap?-1:0;
   $("panelMap").hidden = !isMap;
   $("panelCharts").hidden = isMap;
+  document.body.classList.toggle("tab-charts", !isMap);
   // Leaflet measures its box once; a map that was hidden must be told it is visible again.
   if(isMap && map) setTimeout(()=>{
     map.invalidateSize();
