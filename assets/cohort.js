@@ -50,15 +50,21 @@
     let left = evt.clientX + pad, top = evt.clientY + pad;
     if (left + rect.width > window.innerWidth - 10) left = evt.clientX - rect.width - pad;
     if (top + rect.height > window.innerHeight - 10) top = evt.clientY - rect.height - pad;
+    left = Math.max(10, left); top = Math.max(10, top);
     tip.style.left = left + "px"; tip.style.top = top + "px";
   }
-  const hideTip = () => tip.classList.remove("show");
+  let tipOwner = null;
+  const hideTip = () => { tip.classList.remove("show"); tipOwner = null; };
+  document.addEventListener("pointerdown", e => { if (tipOwner && !tipOwner.contains(e.target)) hideTip(); }, true);
+  document.addEventListener("scroll", () => { if (tipOwner) hideTip(); }, true);
   function bindHover(node, title, rows){
     node.setAttribute("tabindex", "0");
     const rowsFn = typeof rows === "function" ? rows : () => rows;
-    node.addEventListener("pointerenter", e => showTip(e, title, rowsFn()));
-    node.addEventListener("pointermove", moveTip);
-    node.addEventListener("pointerleave", hideTip);
+    // Mouse: follow the pointer. Touch: a tap shows the tooltip until the next tap elsewhere or a scroll.
+    node.addEventListener("pointerenter", e => { if (e.pointerType !== "touch") showTip(e, title, rowsFn()); });
+    node.addEventListener("pointermove", e => { if (e.pointerType !== "touch") moveTip(e); });
+    node.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") hideTip(); });
+    node.addEventListener("pointerup", e => { if (e.pointerType === "touch"){ showTip(e, title, rowsFn()); tipOwner = node; } });
     node.addEventListener("focus", () => { const b = node.getBoundingClientRect(); showTip({clientX:b.left, clientY:b.top}, title, rowsFn()); });
     node.addEventListener("blur", hideTip);
   }
